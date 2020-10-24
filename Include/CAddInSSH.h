@@ -4,6 +4,7 @@
 #include "IMemoryManager.h"
 #include "libssh2.h"
 
+
 class Prop {
 public:
 	Prop(wchar_t* _name, bool _readable, bool _writable, uint8_t _type)
@@ -13,53 +14,44 @@ public:
 		writable = _writable;
 		type = _type;
 
-		if (type == 1)
+
+		switch (type)
 		{
-			bool _value = false;
+		case 1:
+		{
+			const bool _value = false;
 			size = sizeof(bool);
 			value = malloc(size);
 			memcpy(value, &_value, size);
-			
-		}
-	}
-
-	bool getPropVal(tVariant* varPropVal)
-	{
-		switch (type)
-		{
-		case 1:
-		{
-			bool _value = false;
-			memcpy(&_value, value, size);
-			TV_VT(varPropVal) = VTYPE_BOOL;
-			TV_BOOL(varPropVal) = _value;
 			break;
 		}
-		default:
-			return false;
+		case 2:
+		{
+			wchar_t* _value = L"";
+			size = sizeof(wchar_t) * (wcslen(_value) + 1);
+			value = malloc(size);
+			memcpy(value, _value, size);
+			break;
 		}
-		return true;
-
-	}
-
-	bool setPropVal(tVariant* propVal)
-	{
-		switch (type)
+		case 3:
 		{
-		case 1:
-		{
-			if (TV_VT(propVal) != VTYPE_BOOL)
-				return false;
-			bool _value = TV_BOOL(propVal);
+			int _value = 0;
+			size = sizeof(int);
+			value = malloc(size);
 			memcpy(value, &_value, size);
 			break;
 		}
-		default:
-			void* _value = 0;
-			return false;
 		}
-		return true;
 	}
+
+	~Prop()
+	{
+		//delete value;
+	}
+
+	bool getPropVal(tVariant * varPropVal, IMemoryManager * iMemory);
+
+	bool setPropVal(tVariant * propVal);
 
 	bool isReadable()
 	{
@@ -95,6 +87,16 @@ public:
 	{
 	}
 };
+
+class PropString : public Prop {
+public:
+	PropString(wchar_t* _name, bool _readable, bool _writable) :Prop(_name, _readable, _writable, 2)
+	{
+	}
+};
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // class CAddInNative
@@ -150,8 +152,8 @@ private:
 	// Attributes
 	IMemoryManager* p_iMemory;
 	std::array<Prop, 2> props = {
-		(Prop)PropBool(L"test", true, true),
-		(Prop)PropBool(L"test2", true, true)
+		(Prop)PropString(L"Адрес", true, true),
+		Prop(L"Порт", true, true, 3)
 	};
 
 };

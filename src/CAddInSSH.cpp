@@ -82,7 +82,7 @@ const WCHAR_T* CAddInNative::GetPropName(long lPropNum, long lPropAlias)
 //---------------------------------------------------------------------------//
 bool CAddInNative::GetPropVal(const long lPropNum, tVariant* pvarPropVal)
 {
-	return props[lPropNum].getPropVal(pvarPropVal);
+	return props[lPropNum].getPropVal(pvarPropVal, p_iMemory);
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::SetPropVal(const long lPropNum, tVariant* varPropVal)
@@ -230,4 +230,88 @@ uint32_t CAddInNative::getLenShortWcharStr(const WCHAR_T* Source)
 		++res;
 
 	return res;
+}
+
+bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
+{
+	switch (type)
+	{
+	case 1:
+	{
+		bool _value = false;
+		memcpy(&_value, value, size);
+		TV_VT(varPropVal) = VTYPE_BOOL;
+		TV_BOOL(varPropVal) = _value;
+		break;
+	}
+	case 2:
+	{
+		
+		TV_VT(varPropVal) = VTYPE_PWSTR;
+		int lenght = wcslen((wchar_t*)value) + 1;
+		WCHAR_T* _value = NULL;
+
+		iMemory->AllocMemory((void**)&_value, lenght * sizeof(WCHAR_T));
+		CAddInNative::convToShortWchar(&_value, (wchar_t*)value);
+
+		varPropVal->pwstrVal = _value;
+		varPropVal->wstrLen = lenght - 1;
+		return true;
+	}
+	case 3:
+	{
+		int _value = false;
+		memcpy(&_value, value, size);
+		TV_VT(varPropVal) = VTYPE_I4;
+		TV_I4(varPropVal) = _value;
+		break;
+	}
+	default:
+		return false;
+	}
+	return true;
+}
+
+//TODO: у свойств должно быть описание допустимых типов
+
+bool Prop::setPropVal(tVariant* propVal)
+{
+	switch (TV_VT(propVal))
+	{
+	case VTYPE_BOOL:
+	{
+		//if (TV_VT(propVal) != VTYPE_BOOL)
+			//return false;
+		const bool _value = TV_BOOL(propVal);
+		memcpy(value, &_value, size);
+		type = 1; //TODO: удалить это говно
+		break;
+	}
+	case VTYPE_PWSTR:
+	{
+		if (TV_VT(propVal) != VTYPE_PWSTR)
+			return false;
+
+		const WCHAR_T* _value = propVal->pwstrVal;
+		delete[] value;
+		value = malloc(sizeof(wchar_t) * propVal->strLen);
+		CAddInNative::convFromShortWchar((wchar_t**)&value, _value);
+		type = 2; //TODO: удалить это говно
+
+		break;
+	}
+	case VTYPE_I4:
+	{
+		if (TV_VT(propVal) != VTYPE_I4)
+			return false;
+		const int32_t _value = TV_I4(propVal);
+		memcpy(value, &_value, size);
+		type = 3; //TODO: удалить это говно
+		break;
+	}
+	default:
+		void* _value = 0;
+		return false;
+	}
+	return true;
 }
