@@ -4,6 +4,98 @@
 #include "IMemoryManager.h"
 #include "libssh2.h"
 
+class Prop {
+public:
+	Prop(wchar_t* _name, bool _readable, bool _writable, uint8_t _type)
+	{
+		name = _name;
+		readable = _readable;
+		writable = _writable;
+		type = _type;
+
+		if (type == 1)
+		{
+			bool _value = false;
+			size = sizeof(bool);
+			value = malloc(size);
+			memcpy(value, &_value, size);
+			
+		}
+	}
+
+	bool getPropVal(tVariant* varPropVal)
+	{
+		switch (type)
+		{
+		case 1:
+		{
+			bool _value = false;
+			memcpy(&_value, value, size);
+			TV_VT(varPropVal) = VTYPE_BOOL;
+			TV_BOOL(varPropVal) = _value;
+			break;
+		}
+		default:
+			return false;
+		}
+		return true;
+
+	}
+
+	bool setPropVal(tVariant* propVal)
+	{
+		switch (type)
+		{
+		case 1:
+		{
+			if (TV_VT(propVal) != VTYPE_BOOL)
+				return false;
+			bool _value = TV_BOOL(propVal);
+			memcpy(value, &_value, size);
+			break;
+		}
+		default:
+			void* _value = 0;
+			return false;
+		}
+		return true;
+	}
+
+	bool isReadable()
+	{
+		return readable;
+	}
+
+	bool isWritable()
+	{
+		return writable;
+	}
+
+	uint8_t getPropType()
+	{
+		return type;
+	}
+
+	wchar_t* getName()
+	{
+		return name;
+	}
+private:
+	uint8_t type = 0;
+	bool readable = false;
+	bool writable = false;
+	wchar_t* name;
+	void* value;
+	int size;
+};
+
+class PropBool : public Prop {
+public:
+	PropBool(wchar_t* _name, bool _readable, bool _writable) :Prop(_name, _readable, _writable, 1)
+	{
+	}
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // class CAddInNative
 class CAddInNative : public IComponentBase
@@ -57,9 +149,9 @@ public:
 private:
 	// Attributes
 	IMemoryManager* p_iMemory;
-	std::array<wchar_t*, 2> props = {
-		L"Адрес",
-		L"Порт"
+	std::array<Prop, 2> props = {
+		(Prop)PropBool(L"test", true, true),
+		(Prop)PropBool(L"test2", true, true)
 	};
 
 };

@@ -5,7 +5,7 @@
 //CAddInNative
 CAddInNative::CAddInNative()
 {
-
+	
 }
 //---------------------------------------------------------------------------//
 CAddInNative::~CAddInNative()
@@ -40,44 +40,64 @@ bool CAddInNative::RegisterExtensionAs(WCHAR_T** wsExtensionName)
 		return true;
 	}
 	return false;
+	
 }
 //---------------------------------------------------------------------------//
 long CAddInNative::GetNProps()
 {
-	return eLastProp;
+	return props.size();
 }
 //---------------------------------------------------------------------------//
 long CAddInNative::FindProp(const WCHAR_T* wsPropName)
 {
 	wchar_t* propName = 0;
 	convFromShortWchar(&propName, wsPropName);
+	int index = -1;
+	for (int i = 0; i < props.size(); i++)
+	{
+		wchar_t* currPropName = props[i].getName();
+		if (!wcscmp(propName, currPropName))
+		{
+			index = i;
+			break;
+		}
+	}
 
-	return -1;
+	return index;
 }
 //---------------------------------------------------------------------------//
 const WCHAR_T* CAddInNative::GetPropName(long lPropNum, long lPropAlias)
 {
-	return 0;
+	Prop prop = props[lPropNum];
+	WCHAR_T* wsPropName = 0;
+
+	wchar_t* currentName = prop.getName();
+	size_t lenght = wcslen(currentName) + 1;
+
+	if (p_iMemory->AllocMemory((void**)& wsPropName, lenght * sizeof(WCHAR_T)))
+		convToShortWchar(&wsPropName, currentName, lenght);
+
+	return wsPropName;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::GetPropVal(const long lPropNum, tVariant* pvarPropVal)
 {
-	return false;
+	return props[lPropNum].getPropVal(pvarPropVal);
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::SetPropVal(const long lPropNum, tVariant* varPropVal)
 {
-	return false;
+	return props[lPropNum].setPropVal(varPropVal);
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::IsPropReadable(const long lPropNum)
 {
-	return false;
+	return props[lPropNum].isReadable();
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::IsPropWritable(const long lPropNum)
 {
-	return false;
+	return props[lPropNum].isWritable();
 }
 //---------------------------------------------------------------------------//
 long CAddInNative::GetNMethods()
