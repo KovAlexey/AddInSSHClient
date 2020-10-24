@@ -1,6 +1,9 @@
 #include "CAddInSSH.h"
 
 
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "libssh2.lib")
+
 //---------------------------------------------------------------------------//
 //CAddInNative
 CAddInNative::CAddInNative()
@@ -52,16 +55,7 @@ long CAddInNative::FindProp(const WCHAR_T* wsPropName)
 {
 	wchar_t* propName = 0;
 	convFromShortWchar(&propName, wsPropName);
-	int index = -1;
-	for (int i = 0; i < props.size(); i++)
-	{
-		wchar_t* currPropName = props[i].getName();
-		if (!wcscmp(propName, currPropName))
-		{
-			index = i;
-			break;
-		}
-	}
+	int index = w_FindProp(propName);
 
 	return index;
 }
@@ -107,7 +101,21 @@ long CAddInNative::GetNMethods()
 //---------------------------------------------------------------------------//
 long CAddInNative::FindMethod(const WCHAR_T* wsMethodName)
 {
-	return -1;
+	long methonNum = -1;
+	wchar_t* methodName = 0;
+	convFromShortWchar(&methodName, wsMethodName);
+
+	for (int i = 0; i < eLastMethod; i++)
+	{
+		const wchar_t* currMethodName = methodNames[i];
+		if (!wcscmp(methodName, currMethodName))
+		{
+			methonNum = i;
+			break;
+		}
+	}
+
+	return methonNum;
 }
 //---------------------------------------------------------------------------//
 const WCHAR_T* CAddInNative::GetMethodName(const long lMethodNum,
@@ -118,18 +126,36 @@ const WCHAR_T* CAddInNative::GetMethodName(const long lMethodNum,
 //---------------------------------------------------------------------------//
 long CAddInNative::GetNParams(const long lMethodNum)
 {
+	long paramsCount = 0;
+	switch (lMethodNum)
+	{
+	case methodInitialize:
+	case methodConnect:
+		paramsCount = 0;
+		break;
+	}
 	return 0;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::GetParamDefValue(const long lMethodNum, const long lParamNum,
 	tVariant* pvarParamDefValue)
 {
-	return false;
+	bool ret = false;
+	
+	return ret;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::HasRetVal(const long lMethodNum)
 {
-	return false;
+	bool ret = false;
+	switch (lMethodNum)
+	{
+	case methodInitialize:
+	case  methodConnect:
+		ret = true;
+		break;
+	}
+	return ret;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::CallAsProc(const long lMethodNum,
@@ -141,7 +167,27 @@ bool CAddInNative::CallAsProc(const long lMethodNum,
 bool CAddInNative::CallAsFunc(const long lMethodNum,
 	tVariant* pvarRetValue, tVariant* paParams, const long lSizeArray)
 {
-	return false;
+	bool ret = false;
+	switch (lMethodNum)
+	{
+	case methodInitialize:
+	{
+		int32_t result = initializeSSH();
+		TV_VT(pvarRetValue) = VTYPE_I4;
+		TV_I4(pvarRetValue) = result;
+		ret = true;
+		break;
+	}
+	case methodConnect:
+	{
+		int32_t result = connectToSSH();
+		TV_VT(pvarRetValue) = VTYPE_I4;
+		TV_I4(pvarRetValue) = result;
+		ret = true;
+		break;
+	}
+	}
+	return true;
 }
 //---------------------------------------------------------------------------//
 void CAddInNative::SetLocale(const WCHAR_T* loc)
@@ -169,6 +215,22 @@ void CAddInNative::SetLocale(const WCHAR_T* loc)
 	delete[] mbstr;
 #endif
 }
+
+long CAddInNative::w_FindProp(const wchar_t* propName)
+{
+	long index = -1;
+	for (int i = 0; i < props.size(); i++)
+	{
+		wchar_t* currPropName = props[i].getName();
+		if (!wcscmp(propName, currPropName))
+		{
+			index = i;
+			break;
+		}
+	}
+	return index;
+}
+
 //---------------------------------------------------------------------------//
 bool CAddInNative::setMemManager(void* mem)
 {
@@ -232,6 +294,77 @@ uint32_t CAddInNative::getLenShortWcharStr(const WCHAR_T* Source)
 	return res;
 }
 
+int32_t CAddInNative::initializeSSH()
+{
+	WSADATA wsadata;
+	int32_t err = 0;
+	err = WSAStartup(MAKEWORD(2, 0), &wsadata);
+	if (err != 0)
+		return err;
+
+	err = libssh2_init(0);
+
+	return 0;
+}
+
+int32_t CAddInNative::connectToSSH()
+{
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	struct sockaddr_in sockaddr;
+	ZeroMemory(&sockaddr, sizeof(sockaddr));
+	
+	tVariant propValue;
+	const int* port = (int*)props[w_FindProp(L"Порт")].getValue();
+
+	const wchar_t* w_inet_addr = (wchar_t*)props[w_FindProp(L"Адрес")].getValue();
+	int lenght = wcslen(w_inet_addr) + 1;
+	char* init_addr_char = new char[lenght];
+	wcstombs(init_addr_char, w_inet_addr, lenght);
+
+	sockaddr.sin_family = AF_INET;
+	sockaddr.sin_port = htons(*port);
+	sockaddr.sin_addr.s_addr = inet_addr(init_addr_char);
+
+	delete init_addr_char;
+
+	int ret = connect(sock, (struct sockaddr*)&sockaddr, sizeof(struct sockaddr_in));
+	
+	if (ret != 0)
+		return WSAGetLastError();
+
+	session = libssh2_session_init();
+	if (libssh2_session_handshake(session, sock))
+	{
+		return -1;
+	}
+
+	
+
+	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+
+	const wchar_t* w_user = (wchar_t*)props[w_FindProp(L"Логин")].getValue();
+	lenght = wcslen(w_user) + 1;
+	char* user = new char[lenght];
+	wcstombs(user, w_user, lenght);
+
+	const wchar_t* w_pass = (wchar_t*)props[w_FindProp(L"Пароль")].getValue();
+	lenght = wcslen(w_pass) + 1;
+	char* pass = new char[lenght];
+	wcstombs(pass, w_pass, lenght);
+	
+
+	
+	SetLocale(LC_ALL);
+	if (libssh2_userauth_password(session, "Алексей", "251446"))
+		ret = -2;
+
+	delete user;
+	delete pass;
+
+	return ret;
+}
+
 bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
 {
 	switch (type)
@@ -267,6 +400,7 @@ bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
 		break;
 	}
 	default:
+		
 		return false;
 	}
 	return true;
@@ -283,6 +417,8 @@ bool Prop::setPropVal(tVariant* propVal)
 	{
 		//if (TV_VT(propVal) != VTYPE_BOOL)
 			//return false;
+		delete[] value;
+		value = malloc(sizeof(bool));
 		const bool _value = TV_BOOL(propVal);
 		memcpy(value, &_value, size);
 		type = 1; //TODO: удалить это говно
@@ -305,14 +441,20 @@ bool Prop::setPropVal(tVariant* propVal)
 	{
 		if (TV_VT(propVal) != VTYPE_I4)
 			return false;
+		delete[] value;
+		value = malloc(sizeof(int32_t));
 		const int32_t _value = TV_I4(propVal);
 		memcpy(value, &_value, size);
 		type = 3; //TODO: удалить это говно
 		break;
 	}
 	default:
-		void* _value = 0;
 		return false;
 	}
 	return true;
+}
+
+void* Prop::getValue()
+{
+	return value;
 }

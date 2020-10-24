@@ -12,6 +12,5 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="AddInNative.def" />
-    <None Include="packages.config" />
   </ItemGroup>
 </Project>

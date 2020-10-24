@@ -2,7 +2,7 @@
 #include "ComponentBase.h"
 #include "AddInDefBase.h"
 #include "IMemoryManager.h"
-#include "libssh2.h"
+#include <libssh2.h>
 
 
 class Prop {
@@ -52,6 +52,8 @@ public:
 	bool getPropVal(tVariant * varPropVal, IMemoryManager * iMemory);
 
 	bool setPropVal(tVariant * propVal);
+
+	void* getValue();
 
 	bool isReadable()
 	{
@@ -103,14 +105,17 @@ public:
 class CAddInNative : public IComponentBase
 {
 public:
-	enum Props
-	{
-		eLastProp      // Always last
-	};
-
+	
 	enum Methods
 	{
+		methodInitialize = 0,
+		methodConnect,
 		eLastMethod      // Always last
+	};
+
+	wchar_t* methodNames[eLastMethod] = {
+		L"Инициализация",
+		L"Подключиться"
 	};
 
 	CAddInNative(void);
@@ -145,16 +150,25 @@ public:
 	// LocaleBase
 	virtual void ADDIN_API SetLocale(const WCHAR_T* loc);
 
+	long w_FindProp(const wchar_t* propName);
+
 	static uint32_t getLenShortWcharStr(const WCHAR_T* Source);
 	static uint32_t convFromShortWchar(wchar_t** Dest, const WCHAR_T* Source, uint32_t len = 0);
 	static uint32_t convToShortWchar(WCHAR_T** Dest, const wchar_t* Source, uint32_t len = 0);
 private:
 	// Attributes
 	IMemoryManager* p_iMemory;
-	std::array<Prop, 2> props = {
-		(Prop)PropString(L"Адрес", true, true),
-		Prop(L"Порт", true, true, 3)
+	std::array<Prop, 4> props = {
+		Prop(L"Адрес", true, true, 2),
+		Prop(L"Порт", true, true, 3),
+		Prop(L"Логин", true, true, 2),
+		Prop(L"Пароль", true, true, 2)
 	};
+	int sock;
+
+	int32_t initializeSSH();
+	int32_t connectToSSH();
+	LIBSSH2_SESSION* session;
 
 };
 
