@@ -12,22 +12,36 @@
 #include <array>
 #include <wchar.h>
 #include <string>
-#include "AddInNative.h"
+#include "CAddInSSH.h"
+
+class WcharWrapper
+{
+public:
+#ifdef LINUX_OR_MACOS
+	WcharWrapper(const WCHAR_T* str);
+#endif
+	WcharWrapper(const wchar_t* str);
+	~WcharWrapper();
+#ifdef LINUX_OR_MACOS
+	operator const WCHAR_T* () { return m_str_WCHAR; }
+	operator WCHAR_T* () { return m_str_WCHAR; }
+#endif
+	operator const wchar_t* () { return m_str_wchar; }
+	operator wchar_t* () { return m_str_wchar; }
+private:
+	WcharWrapper& operator = (const WcharWrapper& other) { return *this; }
+	WcharWrapper(const WcharWrapper& other) { }
+private:
+#ifdef LINUX_OR_MACOS
+	WCHAR_T* m_str_WCHAR;
+#endif
+	wchar_t* m_str_wchar;
+};
 
 
-static const wchar_t g_kClassNames[] = L"CAddInNativeSSH"; //|OtherClass1|OtherClass2";
+static const wchar_t g_kClassNames[] = L"CAddInNativeSSH"; 
 static WcharWrapper s_names(g_kClassNames);
 
-//static const std::array<wchar_t*, 2> g_PropNames[] = {
-//	L"Адрес",
-//	L"Порт"
-//};
-
-
-
-//uint32_t convToShortWchar(WCHAR_T** Dest, const wchar_t* Source, uint32_t len = 0);
-//uint32_t convFromShortWchar(wchar_t** Dest, const WCHAR_T* Source, uint32_t len = 0);
-//uint32_t getLenShortWcharStr(const WCHAR_T* Source);
 
 //---------------------------------------------------------------------------//
 long GetClassObject(const wchar_t* wsName, IComponentBase** pInterface)
