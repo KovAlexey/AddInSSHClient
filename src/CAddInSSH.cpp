@@ -272,7 +272,8 @@ bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
 	return true;
 }
 
-//TODO: у свойств должно быть описание допустимых типов
+//TODO: у свойств должно быть описание допустимых типов. Убрать утечку памяти при смене типов
+
 
 bool Prop::setPropVal(tVariant* propVal)
 {
