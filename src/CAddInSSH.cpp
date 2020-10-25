@@ -326,7 +326,9 @@ int32_t CAddInNative::connectToSSH()
 	tVariant propValue;
 	const int* port = (int*)props[w_FindProp(L"Порт")].getValue();
 
-	const wchar_t* w_inet_addr = (wchar_t*)props[w_FindProp(L"Адрес")].getValue();
+	//TODO: Обернуть все это в адекватную функцию
+	std::wstring* temp_string = (std::wstring*)props[w_FindProp(L"Адрес")].getValue();
+	const wchar_t* w_inet_addr = temp_string->c_str();
 	int lenght = wcslen(w_inet_addr) + 1;
 	char* init_addr_char = new char[lenght];
 	wcstombs(init_addr_char, w_inet_addr, lenght);
@@ -352,14 +354,16 @@ int32_t CAddInNative::connectToSSH()
 
 	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 
-	const wchar_t* w_user = (wchar_t*)props[w_FindProp(L"Логин")].getValue();
+	temp_string = (std::wstring*)props[w_FindProp(L"Логин")].getValue();
+	const wchar_t* w_user = temp_string->c_str();
 	lenght = wcslen(w_user) + 1;
 	
 	//std::string userString = "";
 	char* user = new char[lenght];
 	wcstombs(user, w_user, lenght);
 
-	const wchar_t* w_pass = (wchar_t*)props[w_FindProp(L"Пароль")].getValue();
+	temp_string = (std::wstring*)props[w_FindProp(L"Пароль")].getValue();
+	const wchar_t* w_pass = temp_string->c_str();
 	lenght = wcslen(w_pass) + 1;
 	char* pass = new char[lenght];
 	wcstombs(pass, w_pass, lenght);
@@ -394,10 +398,13 @@ bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
 		
 		TV_VT(varPropVal) = VTYPE_PWSTR;
 		int lenght = wcslen((wchar_t*)value) + 1;
-		WCHAR_T* _value = NULL;
+		
+
+		std::wstring* p_value = (std::wstring*)value;
+		WCHAR_T* _value;
 
 		iMemory->AllocMemory((void**)&_value, lenght * sizeof(WCHAR_T));
-		CAddInNative::convToShortWchar(&_value, (wchar_t*)value);
+		CAddInNative::convToShortWchar(&_value, p_value->c_str());
 
 		varPropVal->pwstrVal = _value;
 		varPropVal->wstrLen = lenght - 1;
@@ -441,10 +448,13 @@ bool Prop::setPropVal(tVariant* propVal)
 		if (TV_VT(propVal) != VTYPE_PWSTR)
 			return false;
 
-		const WCHAR_T* _value = propVal->pwstrVal;
-		delete[] value;
-		value = malloc(sizeof(wchar_t) * propVal->strLen);
-		CAddInNative::convFromShortWchar((wchar_t**)&value, _value);
+		wchar_t* _value = NULL;
+		CAddInNative::convFromShortWchar((wchar_t**)&_value, propVal->pwstrVal);
+
+		delete value;		
+		value = new std::wstring(_value);
+		delete[] _value;
+
 		type = 2; //TODO: удалить это говно
 
 		break;
