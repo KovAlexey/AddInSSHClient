@@ -356,7 +356,7 @@ int32_t CAddInNative::connectToSSH()
 
 	
 	SetLocale(LC_ALL);
-	if (libssh2_userauth_password(session, "Алексей", "251446"))
+	if (libssh2_userauth_password(session, "Алексей", "pass"))
 		ret = -2;
 
 	delete user;
