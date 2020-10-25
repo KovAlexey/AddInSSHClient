@@ -1,5 +1,5 @@
 #include "CAddInSSH.h"
-
+#include <locale>
 
 
 
@@ -307,6 +307,15 @@ int32_t CAddInNative::initializeSSH()
 	return 0;
 }
 
+std::string utf8_encode(const std::wstring& wstr)
+{
+	if (wstr.empty()) return std::string();
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+	std::string strTo(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+	return strTo;
+}
+
 int32_t CAddInNative::connectToSSH()
 {
 	sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -345,6 +354,8 @@ int32_t CAddInNative::connectToSSH()
 
 	const wchar_t* w_user = (wchar_t*)props[w_FindProp(L"Логин")].getValue();
 	lenght = wcslen(w_user) + 1;
+	
+	//std::string userString = "";
 	char* user = new char[lenght];
 	wcstombs(user, w_user, lenght);
 
@@ -354,16 +365,17 @@ int32_t CAddInNative::connectToSSH()
 	wcstombs(pass, w_pass, lenght);
 	
 
-	
-	SetLocale(LC_ALL);
-	if (libssh2_userauth_password(session, "Алексей", "pass2"))
-		ret = -2;
+	ret = libssh2_userauth_password(session, user, pass);
+	if (ret)
+		return ret;
 
 	delete user;
 	delete pass;
 
 	return ret;
 }
+
+
 
 bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
 {
