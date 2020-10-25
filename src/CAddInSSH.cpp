@@ -1,8 +1,7 @@
 #include "CAddInSSH.h"
 
 
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "libssh2.lib")
+
 
 //---------------------------------------------------------------------------//
 //CAddInNative
@@ -27,6 +26,7 @@ long CAddInNative::GetInfo()
 //---------------------------------------------------------------------------//
 void CAddInNative::Done()
 {
+
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::RegisterExtensionAs(WCHAR_T** wsExtensionName)
