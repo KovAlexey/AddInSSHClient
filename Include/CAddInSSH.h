@@ -1,4 +1,4 @@
-#include <array>
+п»ї#include <array>
 #include "ComponentBase.h"
 #include "AddInDefBase.h"
 #include "IMemoryManager.h"
@@ -22,8 +22,8 @@ public:
 	};
 
 	wchar_t* methodNames[eLastMethod] = {
-		L"Инициализация",
-		L"Подключиться"
+		L"РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ",
+		L"РџРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ"
 	};
 
 	CAddInNative(void);
@@ -64,10 +64,10 @@ private:
 	// Attributes
 	IMemoryManager* p_iMemory;
 	std::array<Prop, 4> props = {
-		Prop(L"Адрес", true, true, propClassWString),
-		Prop(L"Порт", true, true, propClassInt4),
-		Prop(L"Логин", true, true, propClassWString),
-		Prop(L"Пароль", true, true, propClassWString)
+		Prop(L"РђРґСЂРµСЃ", true, true, propClassWString),
+		Prop(L"РџРѕСЂС‚", true, true, propClassInt4),
+		Prop(L"Р›РѕРіРёРЅ", true, true, propClassWString),
+		Prop(L"РџР°СЂРѕР»СЊ", true, true, propClassWString)
 	};
 	int sock;
 
