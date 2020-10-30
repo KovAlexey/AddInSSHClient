@@ -1,5 +1,6 @@
-#include "CAddInSSH.h"
+п»ї#include "CAddInSSH.h"
 #include <locale>
+
 
 
 
@@ -38,7 +39,7 @@ bool CAddInNative::RegisterExtensionAs(WCHAR_T** wsExtensionName)
 	{
 		if (p_iMemory->AllocMemory((void**)wsExtensionName, (unsigned)sizeof(WCHAR_T) * size))
 		{
-			convToShortWchar(wsExtensionName, wsExtennsion, size);
+			OneCStringConverter::convToShortWchar(wsExtensionName, wsExtennsion, size);
 		}
 		return true;
 	}
@@ -54,7 +55,7 @@ long CAddInNative::GetNProps()
 long CAddInNative::FindProp(const WCHAR_T* wsPropName)
 {
 	wchar_t* propName = 0;
-	convFromShortWchar(&propName, wsPropName);
+	OneCStringConverter::convFromShortWchar(&propName, wsPropName);
 	int index = w_FindProp(propName);
 
 	return index;
@@ -69,7 +70,7 @@ const WCHAR_T* CAddInNative::GetPropName(long lPropNum, long lPropAlias)
 	size_t lenght = wcslen(currentName) + 1;
 
 	if (p_iMemory->AllocMemory((void**)& wsPropName, lenght * sizeof(WCHAR_T)))
-		convToShortWchar(&wsPropName, currentName, lenght);
+		OneCStringConverter::convToShortWchar(&wsPropName, currentName, lenght);
 
 	return wsPropName;
 }
@@ -103,7 +104,7 @@ long CAddInNative::FindMethod(const WCHAR_T* wsMethodName)
 {
 	long methonNum = -1;
 	wchar_t* methodName = 0;
-	convFromShortWchar(&methodName, wsMethodName);
+	OneCStringConverter::convFromShortWchar(&methodName, wsMethodName);
 
 	for (int i = 0; i < eLastMethod; i++)
 	{
@@ -238,61 +239,7 @@ bool CAddInNative::setMemManager(void* mem)
 	return p_iMemory != 0;
 }
 
-//---------------------------------------------------------------------------//
-uint32_t CAddInNative::convToShortWchar(WCHAR_T** Dest, const wchar_t* Source, uint32_t len)
-{
-	if (!len)
-		len = ::wcslen(Source) + 1;
 
-	if (!*Dest)
-		* Dest = new WCHAR_T[len];
-
-	WCHAR_T* tmpShort = *Dest;
-	wchar_t* tmpWChar = (wchar_t*)Source;
-	uint32_t res = 0;
-
-	::memset(*Dest, 0, len * sizeof(WCHAR_T));
-	do
-	{
-		*tmpShort++ = (WCHAR_T)* tmpWChar++;
-		++res;
-	} while (len-- && *tmpWChar);
-
-	return res;
-}
-//---------------------------------------------------------------------------//
-uint32_t CAddInNative::convFromShortWchar(wchar_t** Dest, const WCHAR_T* Source, uint32_t len)
-{
-	if (!len)
-		len = getLenShortWcharStr(Source) + 1;
-
-	if (!*Dest)
-		* Dest = new wchar_t[len];
-
-	wchar_t* tmpWChar = *Dest;
-	WCHAR_T* tmpShort = (WCHAR_T*)Source;
-	uint32_t res = 0;
-
-	::memset(*Dest, 0, len * sizeof(wchar_t));
-	do
-	{
-		*tmpWChar++ = (wchar_t)* tmpShort++;
-		++res;
-	} while (len-- && *tmpShort);
-
-	return res;
-}
-//---------------------------------------------------------------------------//
-uint32_t CAddInNative::getLenShortWcharStr(const WCHAR_T* Source)
-{
-	uint32_t res = 0;
-	WCHAR_T* tmpShort = (WCHAR_T*)Source;
-
-	while (*tmpShort++)
-		++res;
-
-	return res;
-}
 
 int32_t CAddInNative::initializeSSH()
 {
@@ -324,10 +271,11 @@ int32_t CAddInNative::connectToSSH()
 	ZeroMemory(&sockaddr, sizeof(sockaddr));
 	
 	tVariant propValue;
-	const int* port = (int*)props[w_FindProp(L"Порт")].getValue();
+	const int* port = (int*)props[w_FindProp(L"РџРѕСЂС‚")].getValue();
 
-	//TODO: Обернуть все это в адекватную функцию
-	std::wstring* temp_string = (std::wstring*)props[w_FindProp(L"Адрес")].getValue();
+	//TODO: РћР±РµСЂРЅСѓС‚СЊ РІСЃРµ СЌС‚Рѕ РІ Р°РґРµРєРІР°С‚РЅСѓСЋ С„СѓРЅРєС†РёСЋ
+	//std::wstring* temp_string = (std::wstring*)props[w_FindProp(L"РђРґСЂРµСЃ")].getValue();
+	std::wstring* temp_string = static_cast<std::wstring*>(props[w_FindProp(L"РђРґСЂРµСЃ")].getValue());
 	const wchar_t* w_inet_addr = temp_string->c_str();
 	int lenght = wcslen(w_inet_addr) + 1;
 	char* init_addr_char = new char[lenght];
@@ -354,21 +302,23 @@ int32_t CAddInNative::connectToSSH()
 
 	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 
-	temp_string = (std::wstring*)props[w_FindProp(L"Логин")].getValue();
+	temp_string = (std::wstring*)props[w_FindProp(L"Р›РѕРіРёРЅ")].getValue();
 	const wchar_t* w_user = temp_string->c_str();
 	lenght = wcslen(w_user) + 1;
 	
-	//std::string userString = "";
-	char* user = new char[lenght];
-	wcstombs(user, w_user, lenght);
+	
 
-	temp_string = (std::wstring*)props[w_FindProp(L"Пароль")].getValue();
+	int size = WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, NULL, 0 , NULL, NULL);
+	char* user = new char[size];
+	WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, user, size, NULL, NULL);
+
+	temp_string = (std::wstring*)props[w_FindProp(L"РџР°СЂРѕР»СЊ")].getValue();
 	const wchar_t* w_pass = temp_string->c_str();
 	lenght = wcslen(w_pass) + 1;
 	char* pass = new char[lenght];
 	wcstombs(pass, w_pass, lenght);
 	
-
+	
 	ret = libssh2_userauth_password(session, user, pass);
 	if (ret)
 		return ret;
@@ -381,102 +331,3 @@ int32_t CAddInNative::connectToSSH()
 
 
 
-bool Prop::getPropVal(tVariant* varPropVal, IMemoryManager* iMemory)
-{
-	switch (type)
-	{
-	case 1:
-	{
-		bool _value = false;
-		memcpy(&_value, value, size);
-		TV_VT(varPropVal) = VTYPE_BOOL;
-		TV_BOOL(varPropVal) = _value;
-		break;
-	}
-	case 2:
-	{
-		
-		TV_VT(varPropVal) = VTYPE_PWSTR;
-		int lenght = wcslen((wchar_t*)value) + 1;
-		
-
-		std::wstring* p_value = (std::wstring*)value;
-		WCHAR_T* _value;
-
-		iMemory->AllocMemory((void**)&_value, lenght * sizeof(WCHAR_T));
-		CAddInNative::convToShortWchar(&_value, p_value->c_str());
-
-		varPropVal->pwstrVal = _value;
-		varPropVal->wstrLen = lenght - 1;
-		return true;
-	}
-	case 3:
-	{
-		int _value = false;
-		memcpy(&_value, value, size);
-		TV_VT(varPropVal) = VTYPE_I4;
-		TV_I4(varPropVal) = _value;
-		break;
-	}
-	default:
-		
-		return false;
-	}
-	return true;
-}
-
-//TODO: у свойств должно быть описание допустимых типов. Убрать утечку памяти при смене типов
-
-
-bool Prop::setPropVal(tVariant* propVal)
-{
-	switch (TV_VT(propVal))
-	{
-	case VTYPE_BOOL:
-	{
-		//if (TV_VT(propVal) != VTYPE_BOOL)
-			//return false;
-		delete[] value;
-		value = malloc(sizeof(bool));
-		const bool _value = TV_BOOL(propVal);
-		memcpy(value, &_value, size);
-		type = 1; //TODO: удалить это говно
-		break;
-	}
-	case VTYPE_PWSTR:
-	{
-		if (TV_VT(propVal) != VTYPE_PWSTR)
-			return false;
-
-		wchar_t* _value = NULL;
-		CAddInNative::convFromShortWchar((wchar_t**)&_value, propVal->pwstrVal);
-
-		delete value;		
-		value = new std::wstring(_value);
-		delete[] _value;
-
-		type = 2; //TODO: удалить это говно
-
-		break;
-	}
-	case VTYPE_I4:
-	{
-		if (TV_VT(propVal) != VTYPE_I4)
-			return false;
-		delete[] value;
-		value = malloc(sizeof(int32_t));
-		const int32_t _value = TV_I4(propVal);
-		memcpy(value, &_value, size);
-		type = 3; //TODO: удалить это говно
-		break;
-	}
-	default:
-		return false;
-	}
-	return true;
-}
-
-void* Prop::getValue()
-{
-	return value;
-}

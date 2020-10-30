@@ -92,7 +92,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);1CAddIn\include;Include;libssh2\include</IncludePath>
-    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;1CAddIn\lib;C:\Users\Alexey\Downloads\libssh2-1.9.0\b\src\debug</LibraryPath>
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;1CAddIn\lib;libssh2\lib\debug</LibraryPath>
     <SourcePath>$(VC_SourcePath);$(VC_SourcePath)\src;</SourcePath>
     <ExecutablePath>$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
   </PropertyGroup>
@@ -207,6 +207,8 @@
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
     <ClCompile Include="src\CAddInSSH.cpp" />
+    <ClCompile Include="src\Prop.cpp" />
+    <ClCompile Include="src\SSHClass.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -219,6 +221,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\CAddInSSH.h" />
+    <ClInclude Include="Include\OneCStringConverter.h" />
+    <ClInclude Include="Include\Prop.h" />
+    <ClInclude Include="Include\SSHClass.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

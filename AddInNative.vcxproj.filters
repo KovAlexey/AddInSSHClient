@@ -5,9 +5,14 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="src\CAddInSSH.cpp" />
+    <ClCompile Include="src\Prop.cpp" />
+    <ClCompile Include="src\SSHClass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Include\Prop.h" />
+    <ClInclude Include="Include\OneCStringConverter.h" />
+    <ClInclude Include="Include\SSHClass.h" />
     <ClInclude Include="Include\CAddInSSH.h" />
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-/* Copyright (c) 2004-2009, Sara Golemon <sarag@libssh2.org>
+﻿/* Copyright (c) 2004-2009, Sara Golemon <sarag@libssh2.org>
  * Copyright (c) 2009-2015 Daniel Stenberg
  * Copyright (c) 2010 Simon Josefsson <simon@josefsson.org>
  * All rights reserved.
@@ -88,6 +88,7 @@
 extern "C" {
 #endif
 #ifdef _WIN32
+#pragma once
 # include <basetsd.h>
 //# include <winsock2.h>
 #endif
