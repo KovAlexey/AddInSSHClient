@@ -1,4 +1,4 @@
-﻿#include "CAddInSSH.h"
+﻿#include <CAddInSSH.h>
 #include <locale>
 
 
@@ -17,7 +17,17 @@ CAddInNative::~CAddInNative()
 //---------------------------------------------------------------------------//
 bool CAddInNative::Init(void* pConnection)
 {
-	return true;
+	p_iConnect = (IAddInDefBase*)pConnection;
+
+	if (p_iConnect)
+	{
+		SSHClass* ssh = new SSHClass(p_iConnect);
+		sshClass = make_shared<SSHClass>(*ssh);
+
+		p_iConnect->SetEventBufferDepth(32);
+	}
+	
+	return p_iConnect != NULL;
 }
 //---------------------------------------------------------------------------//
 long CAddInNative::GetInfo()
@@ -103,13 +113,12 @@ long CAddInNative::GetNMethods()
 long CAddInNative::FindMethod(const WCHAR_T* wsMethodName)
 {
 	long methonNum = -1;
-	wchar_t* methodName = 0;
-	OneCStringConverter::convFromShortWchar(&methodName, wsMethodName);
+	const wstring methodName = OneCStringConverter::convFromShortWcharString(wsMethodName);
 
 	for (int i = 0; i < eLastMethod; i++)
 	{
-		const wchar_t* currMethodName = methodNames[i];
-		if (!wcscmp(methodName, currMethodName))
+		const wstring currMethodName = methodNames[i];
+		if (currMethodName == methodName)
 		{
 			methonNum = i;
 			break;
@@ -122,7 +131,13 @@ long CAddInNative::FindMethod(const WCHAR_T* wsMethodName)
 const WCHAR_T* CAddInNative::GetMethodName(const long lMethodNum,
 	const long lMethodAlias)
 {
-	return 0;
+	const wstring method_name = methodNames[lMethodNum];
+	WCHAR_T* _value;
+
+	p_iMemory->AllocMemory((void**)&_value, (method_name.length() + 1) * sizeof(WCHAR_T));
+	OneCStringConverter::convToShortWchar(&_value, method_name.c_str());
+	
+	return _value;
 }
 //---------------------------------------------------------------------------//
 long CAddInNative::GetNParams(const long lMethodNum)
@@ -130,12 +145,17 @@ long CAddInNative::GetNParams(const long lMethodNum)
 	long paramsCount = 0;
 	switch (lMethodNum)
 	{
-	case methodInitialize:
 	case methodConnect:
-		paramsCount = 0;
+	case methodAutorization:
+		paramsCount = 2;
 		break;
+	case methodSend:
+		paramsCount = 1;
+		break;
+	default:
+		paramsCount = 0;
 	}
-	return 0;
+	return paramsCount;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::GetParamDefValue(const long lMethodNum, const long lParamNum,
@@ -151,10 +171,8 @@ bool CAddInNative::HasRetVal(const long lMethodNum)
 	bool ret = false;
 	switch (lMethodNum)
 	{
-	case methodInitialize:
-	case  methodConnect:
-		ret = true;
-		break;
+	default:
+		ret = false;
 	}
 	return ret;
 }
@@ -162,31 +180,75 @@ bool CAddInNative::HasRetVal(const long lMethodNum)
 bool CAddInNative::CallAsProc(const long lMethodNum,
 	tVariant* paParams, const long lSizeArray)
 {
-	return false;
+	bool ret = true;
+	switch (lMethodNum)
+	{
+	case methodConnect:
+	{
+		if ((lSizeArray != 2) || TV_VT(&paParams[0]) != VTYPE_PWSTR || TV_VT(&paParams[1]) != VTYPE_I4)
+		{
+			ret = false;
+			break;
+		}
+
+		std::wstring address(paParams[0].pwstrVal);
+		int port = paParams[1].intVal;
+		sshClass->StartConnect(address, port);
+
+		break;
+	}
+	case methodAutorization:
+	{
+		if ((lSizeArray != 2) || TV_VT(&paParams[0]) != VTYPE_PWSTR || TV_VT(&paParams[1]) != VTYPE_PWSTR)
+		{
+			ret = false;
+			break;
+		}
+		if (!sshClass->isConnected())
+		{
+			ret = false;
+			p_iConnect->ExternalEvent(L"Log", L"Error", L"Подключение отсутсвует");
+			break;
+		}
+
+		wstring login(paParams[0].pwstrVal);
+		wstring password(paParams[1].pwstrVal);
+		sshClass->StartAutorization(login, password);
+
+		break;
+	}
+	case methodSend:
+	{
+		if ((lSizeArray != 1) || TV_VT(&paParams[0]) != VTYPE_PWSTR)
+		{
+			ret = false;
+			break;
+		}
+
+		wstring message(paParams[0].pwstrVal);
+		sshClass->SendMessageSSH(message);
+
+		break;
+	}
+	case methodDisconnect:
+	{
+		sshClass->Disconnect();
+		break;
+	}
+	default:
+		ret = false;
+	}
+	return ret;
 }
 //---------------------------------------------------------------------------//
 bool CAddInNative::CallAsFunc(const long lMethodNum,
 	tVariant* pvarRetValue, tVariant* paParams, const long lSizeArray)
 {
-	bool ret = false;
+	bool ret = true;
 	switch (lMethodNum)
 	{
-	case methodInitialize:
-	{
-		int32_t result = initializeSSH();
-		TV_VT(pvarRetValue) = VTYPE_I4;
-		TV_I4(pvarRetValue) = result;
-		ret = true;
-		break;
-	}
-	case methodConnect:
-	{
-		int32_t result = connectToSSH();
-		TV_VT(pvarRetValue) = VTYPE_I4;
-		TV_I4(pvarRetValue) = result;
-		ret = true;
-		break;
-	}
+	default:
+		ret = false;
 	}
 	return true;
 }
@@ -241,18 +303,7 @@ bool CAddInNative::setMemManager(void* mem)
 
 
 
-int32_t CAddInNative::initializeSSH()
-{
-	WSADATA wsadata;
-	int32_t err = 0;
-	err = WSAStartup(MAKEWORD(2, 0), &wsadata);
-	if (err != 0)
-		return err;
 
-	err = libssh2_init(0);
-
-	return 0;
-}
 
 std::string utf8_encode(const std::wstring& wstr)
 {
@@ -263,9 +314,9 @@ std::string utf8_encode(const std::wstring& wstr)
 	return strTo;
 }
 
-int32_t CAddInNative::connectToSSH()
-{
-	sock = socket(AF_INET, SOCK_STREAM, 0);
+//int32_t CAddInNative::connectToSSH()
+//{
+	/*sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	struct sockaddr_in sockaddr;
 	ZeroMemory(&sockaddr, sizeof(sockaddr));
@@ -300,21 +351,21 @@ int32_t CAddInNative::connectToSSH()
 
 	
 
-	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);*/
 
-	temp_string = (std::wstring*)props[w_FindProp(L"Логин")].getValue();
-	const wchar_t* w_user = temp_string->c_str();
-	lenght = wcslen(w_user) + 1;
+	//temp_string = (std::wstring*)props[w_FindProp(L"Логин")].getValue();
+	//const wchar_t* w_user = temp_string->c_str();
+	//lenght = wcslen(w_user) + 1;
 	
 	
 
-	int size = WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, NULL, 0 , NULL, NULL);
-	char* user = new char[size];
-	WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, user, size, NULL, NULL);
+	//int size = WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, NULL, 0 , NULL, NULL);
+	//char* user = new char[size];
+	//WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, user, size, NULL, NULL);
 
-	temp_string = (std::wstring*)props[w_FindProp(L"Пароль")].getValue();
-	const wchar_t* w_pass = temp_string->c_str();
-	lenght = wcslen(w_pass) + 1;
+	//temp_string = (std::wstring*)props[w_FindProp(L"Пароль")].getValue();
+	//const wchar_t* w_pass = temp_string->c_str();
+	/*lenght = wcslen(w_pass) + 1;
 	char* pass = new char[lenght];
 	wcstombs(pass, w_pass, lenght);
 	
@@ -324,10 +375,10 @@ int32_t CAddInNative::connectToSSH()
 		return ret;
 
 	delete user;
-	delete pass;
+	delete pass;*/
 
-	return ret;
-}
+	//return 0;
+//}
 
 
 

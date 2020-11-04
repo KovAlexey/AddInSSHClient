@@ -1,6 +1,8 @@
 #include <cstdint>
 #include "AddInDefBase.h"
 #pragma once
+using namespace std;
+
 class OneCStringConverter
 {
 public:
@@ -24,6 +26,13 @@ public:
 		} while (len-- && *tmpShort);
 
 		return res;
+	}
+
+	static wstring convFromShortWcharString(const WCHAR_T* Source)
+	{
+		uint32_t len = getLenShortWcharStr(Source) + 1;
+		wstring result((wchar_t*)Source, 0,len);
+		return result;
 	}
 	
 	static uint32_t getLenShortWcharStr(const WCHAR_T* Source)
@@ -58,5 +67,7 @@ public:
 
 		return res;
 	}
+
+	
 };
 

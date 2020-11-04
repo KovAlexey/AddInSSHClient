@@ -2,11 +2,12 @@
 #include "ComponentBase.h"
 #include "AddInDefBase.h"
 #include "IMemoryManager.h"
-#include <libssh2.h>
+//#include <libssh2.h>
+#include "SSHClass.h"
 #include "Prop.h"
 #include "OneCStringConverter.h"
 
-
+using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 // class CAddInNative
@@ -16,14 +17,18 @@ public:
 	
 	enum Methods
 	{
-		methodInitialize = 0,
-		methodConnect,
+		methodConnect = 0,
+		methodAutorization,
+		methodSend,
+		methodDisconnect,
 		eLastMethod      // Always last
 	};
 
-	wchar_t* methodNames[eLastMethod] = {
-		L"Инициализация",
-		L"Подключиться"
+	wstring methodNames[eLastMethod] = {
+		L"Подключиться",
+		L"Авторизация",
+		L"Отправить",
+		L"Отключиться"
 	};
 
 	CAddInNative(void);
@@ -63,18 +68,16 @@ public:
 private:
 	// Attributes
 	IMemoryManager* p_iMemory;
+	IAddInDefBase* p_iConnect;
 	std::array<Prop, 4> props = {
 		Prop(L"Адрес", true, true, propClassWString),
 		Prop(L"Порт", true, true, propClassInt4),
 		Prop(L"Логин", true, true, propClassWString),
 		Prop(L"Пароль", true, true, propClassWString)
 	};
-	int sock;
-
-	int32_t initializeSSH();
-	int32_t connectToSSH();
-	LIBSSH2_SESSION* session;
-
+	
+	shared_ptr<SSHClass> sshClass = NULL;
+	//void Connect(wstring* login,)
 };
 
 
