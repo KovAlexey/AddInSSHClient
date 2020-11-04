@@ -245,27 +245,41 @@ void SSHClass::ReadWriteThread()
 {
 	int rc = 0;
 	char buffer[1000];
-	
+
+	fd_set fd_in, fd_out;
+	struct timeval tv;
+	tv.tv_sec = 0;
+	tv.tv_usec = 500000;
+
 	do
 	{
-		_mutex.lock();
-		if (!connected)
-			break;
-
-		rc = libssh2_channel_read(channel, buffer, sizeof(buffer));
-		_mutex.unlock();
-		if (rc > 0)
+		FD_ZERO(&fd_in);
+		FD_SET(sock, &fd_in);
+		
+		int ret = select(sock, &fd_in, NULL, NULL, &tv);
+		if (ret == -1)
 		{
+			pConnection->ExternalEvent(L"Log", L"Error", L"Error read -1");
+			break;
+		} if (ret != 0)
+		{
+			if (FD_ISSET(sock, &fd_in))
+			{
+				rc = libssh2_channel_read(channel, buffer, sizeof(buffer));
+				_mutex.lock();
+				if (rc > 0)
+				{
 
-			string utf8_string(buffer, rc);
-			wstring message = utf8_decode(utf8_string);
-			pConnection->ExternalEvent(L"Log", L"Message", (wchar_t*)message.c_str());
+					string utf8_string(buffer, rc);
+					wstring message = utf8_decode(utf8_string);
+					pConnection->ExternalEvent(L"Log", L"Message", (wchar_t*)message.c_str());
+				}
+				_mutex.unlock();
+			}
 		}
-		else if (rc == LIBSSH2_ERROR_EAGAIN)
-			Sleep(100);
-		else //if (rc != LIBSSH2_ERROR_EAGAIN)
-			pConnection->ExternalEvent(L"Log", L"Error", L"Error read ");
-	} while (rc > 0 || connected);
+		
+	} while (connected);
+	
 
 	autorized = false;
 }
