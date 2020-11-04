@@ -1,4 +1,4 @@
-#include "SSHClass.h"
+п»ї#include "SSHClass.h"
 
 
 mutex _mutex;
@@ -83,10 +83,10 @@ void SSHClass::Autorization(const wstring login, const wstring password)
 		switch (ret)
 		{
 		case LIBSSH2_ERROR_SOCKET_SEND:
-			pConnection->ExternalEvent(L"Log", L"Error", L"Ошибка передачи данных");
+			pConnection->ExternalEvent(L"Log", L"Error", L"РћС€РёР±РєР° РїРµСЂРµРґР°С‡Рё РґР°РЅРЅС‹С…");
 			break;
 		case LIBSSH2_ERROR_AUTHENTICATION_FAILED:
-			pConnection->ExternalEvent(L"Log", L"Error", L"Неправильные логин или пароль");
+			pConnection->ExternalEvent(L"Log", L"Error", L"РќРµРїСЂР°РІРёР»СЊРЅС‹Рµ Р»РѕРіРёРЅ РёР»Рё РїР°СЂРѕР»СЊ");
 			break;
 		case LIBSSH2_ERROR_ALLOC:
 			pConnection->ExternalEvent(L"Log", L"Error", L"An internal memory allocation call failed");
@@ -95,10 +95,10 @@ void SSHClass::Autorization(const wstring login, const wstring password)
 			pConnection->ExternalEvent(L"Log", L"Error", L"LIBSSH2_ERROR_PASSWORD_EXPIRED ");
 			break;
 		case -13:
-			pConnection->ExternalEvent(L"Log", L"Error", L"База заблокирована конфигуратором");
+			pConnection->ExternalEvent(L"Log", L"Error", L"Р‘Р°Р·Р° Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅР° РєРѕРЅС„РёРіСѓСЂР°С‚РѕСЂРѕРј");
 			break;
 		default:
-			wstring error = L"Неизвестная ошибка авторизации " + to_wstring(ret);
+			wstring error = L"РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё " + to_wstring(ret);
 			pConnection->ExternalEvent(L"Log", L"Error", (wchar_t*)error.c_str());
 			break;
 		}
@@ -154,7 +154,7 @@ void SSHClass::Connect(const wstring ip, const int port)
 
 	int ret = connect(sock, (struct sockaddr*)&sockaddr, sizeof(struct sockaddr_in));
 	wstring result;
-	result.append(L"Подключение к " + ip + L":" + to_wstring(port) + L" выполнено с кодом (" + to_wstring(ret) + L")");
+	result.append(L"РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє " + ip + L":" + to_wstring(port) + L" РІС‹РїРѕР»РЅРµРЅРѕ СЃ РєРѕРґРѕРј (" + to_wstring(ret) + L")");
 
 	pConnection->ExternalEvent(L"Log", L"Debug", (wchar_t*)result.c_str());
 	pConnection->ExternalEvent(L"System", L"Connection", (wchar_t*)to_wstring(ret).c_str());
@@ -162,7 +162,7 @@ void SSHClass::Connect(const wstring ip, const int port)
 	session = libssh2_session_init();
 	if (session == nullptr)
 	{
-		pConnection->ExternalEvent(L"Debug", L"Error", L"Ошибка создания сессии");
+		pConnection->ExternalEvent(L"Debug", L"Error", L"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ СЃРµСЃСЃРёРё");
 		_mutex.unlock();
 		return;
 	}
@@ -204,11 +204,11 @@ void SSHClass::SendMessageSSH(const wstring message)
 	string utf8_message = utf8_encode(message);
 	int n = libssh2_channel_write(channel, utf8_message.c_str(), utf8_message.length());
 	/*if (n > 0)
-		pConnection->ExternalEvent(L"Log", L"Error", L"Успешно отправлено");
+		pConnection->ExternalEvent(L"Log", L"Error", L"РЈСЃРїРµС€РЅРѕ РѕС‚РїСЂР°РІР»РµРЅРѕ");
 	else*/ if (n == LIBSSH2_ERROR_EAGAIN)
 		pConnection->ExternalEvent(L"Log", L"Error", L"Send LIBSSH2_ERROR_EAGAIN");
 	else if (n < 0)
-		pConnection->ExternalEvent(L"Log", L"Error", L"Ошибка отправки");
+		pConnection->ExternalEvent(L"Log", L"Error", L"РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё");
 	
 }
 
