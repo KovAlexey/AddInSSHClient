@@ -150,6 +150,7 @@ long CAddInNative::GetNParams(const long lMethodNum)
 		paramsCount = 2;
 		break;
 	case methodSend:
+	case methodRequestPTY:
 		paramsCount = 1;
 		break;
 	default:
@@ -235,6 +236,19 @@ bool CAddInNative::CallAsProc(const long lMethodNum,
 		sshClass->Disconnect();
 		break;
 	}
+	case methodRequestPTY:
+	{
+		if ((lSizeArray != 1) || TV_VT(&paParams[0]) != VTYPE_PWSTR)
+		{
+			ret = false;
+			break;
+		}
+
+		wstring pty_name(paParams[0].pwstrVal);
+		sshClass->request_pty(pty_name);
+
+		break;
+	}
 	default:
 		ret = false;
 	}
@@ -313,72 +327,6 @@ std::string utf8_encode(const std::wstring& wstr)
 	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
 	return strTo;
 }
-
-//int32_t CAddInNative::connectToSSH()
-//{
-	/*sock = socket(AF_INET, SOCK_STREAM, 0);
-
-	struct sockaddr_in sockaddr;
-	ZeroMemory(&sockaddr, sizeof(sockaddr));
-	
-	tVariant propValue;
-	const int* port = (int*)props[w_FindProp(L"Порт")].getValue();
-
-	//TODO: Обернуть все это в адекватную функцию
-	//std::wstring* temp_string = (std::wstring*)props[w_FindProp(L"Адрес")].getValue();
-	std::wstring* temp_string = static_cast<std::wstring*>(props[w_FindProp(L"Адрес")].getValue());
-	const wchar_t* w_inet_addr = temp_string->c_str();
-	int lenght = wcslen(w_inet_addr) + 1;
-	char* init_addr_char = new char[lenght];
-	wcstombs(init_addr_char, w_inet_addr, lenght);
-
-	sockaddr.sin_family = AF_INET;
-	sockaddr.sin_port = htons(*port);
-	sockaddr.sin_addr.s_addr = inet_addr(init_addr_char);
-
-	delete init_addr_char;
-
-	int ret = connect(sock, (struct sockaddr*)&sockaddr, sizeof(struct sockaddr_in));
-	
-	if (ret != 0)
-		return WSAGetLastError();
-
-	session = libssh2_session_init();
-	if (libssh2_session_handshake(session, sock))
-	{
-		return -1;
-	}
-
-	
-
-	const char* fingerprint = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);*/
-
-	//temp_string = (std::wstring*)props[w_FindProp(L"Логин")].getValue();
-	//const wchar_t* w_user = temp_string->c_str();
-	//lenght = wcslen(w_user) + 1;
-	
-	
-
-	//int size = WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, NULL, 0 , NULL, NULL);
-	//char* user = new char[size];
-	//WideCharToMultiByte(CP_UTF8, 0, w_user, temp_string->length() + 1, user, size, NULL, NULL);
-
-	//temp_string = (std::wstring*)props[w_FindProp(L"Пароль")].getValue();
-	//const wchar_t* w_pass = temp_string->c_str();
-	/*lenght = wcslen(w_pass) + 1;
-	char* pass = new char[lenght];
-	wcstombs(pass, w_pass, lenght);
-	
-	
-	ret = libssh2_userauth_password(session, user, pass);
-	if (ret)
-		return ret;
-
-	delete user;
-	delete pass;*/
-
-	//return 0;
-//}
 
 
 

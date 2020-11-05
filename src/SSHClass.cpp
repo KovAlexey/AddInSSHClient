@@ -20,21 +20,26 @@ SSHClass::~SSHClass()
 	Disconnect();
 }
 
-std::string SSHClass::utf8_encode(const wstring& wstr)
+std::string SSHClass::utf8WideCharToMultyByte(const wstring& wstr)
 {
 	if (wstr.empty()) return std::string();
 	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
 	string strTo(size_needed, 0);
+	
 	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
 	return strTo;
 }
 
-std::wstring SSHClass::utf8_decode(const string& str)
+std::wstring SSHClass::utf8MultiByteToWideChar(const string& str)
 {
 	if (str.empty()) return wstring();
-	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], -1, NULL, 0);
+	//int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], -1, NULL, 0);
+	int size_needed = min(str.length(), MultiByteToWideChar(CP_UTF8, 0, &str[0], -1, NULL, 0));
+	//char endChar = str.back();
+	//if ((endChar != '\n') && (endChar != '\r'))
+		//size_needed--;
 	wstring wstrTo(size_needed, 0);
-	MultiByteToWideChar(CP_UTF8, 0, &str[0], -1, &wstrTo[0], size_needed);
+	size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], -1, &wstrTo[0], size_needed);
 	return wstrTo;
 }
 
@@ -75,8 +80,8 @@ void SSHClass::StartConnect(const wstring ip, const int port)
 void SSHClass::Autorization(const wstring login, const wstring password)
 {
 	_mutex.lock();
-	string utf8_login = utf8_encode(login.c_str());
-	string utf8_password = utf8_encode(password.c_str());
+	string utf8_login = utf8WideCharToMultyByte(login.c_str());
+	string utf8_password = utf8WideCharToMultyByte(password.c_str());
 	int ret = libssh2_userauth_password(session, utf8_login.c_str(), utf8_password.c_str());
 	if (ret != 0)
 	{
@@ -145,7 +150,7 @@ void SSHClass::Connect(const wstring ip, const int port)
 	struct sockaddr_in sockaddr;
 	ZeroMemory(&sockaddr, sizeof(sockaddr));
 
-	string init_addr_string = utf8_encode(ip);
+	string init_addr_string = utf8WideCharToMultyByte(ip);
 
 	sockaddr.sin_family = AF_INET;
 	sockaddr.sin_port = htons(port);
@@ -201,7 +206,7 @@ void SSHClass::Connect(const wstring ip, const int port)
 
 void SSHClass::SendMessageSSH(const wstring message)
 {
-	string utf8_message = utf8_encode(message);
+	string utf8_message = utf8WideCharToMultyByte(message);
 	int n = libssh2_channel_write(channel, utf8_message.c_str(), utf8_message.length());
 	/*if (n > 0)
 		pConnection->ExternalEvent(L"Log", L"Error", L"Успешно отправлено");
@@ -241,15 +246,29 @@ void SSHClass::Disconnect()
 	_mutex.unlock();
 }
 
+void SSHClass::request_pty(wstring pty_name)
+{
+	string utf8pty_name = utf8WideCharToMultyByte(pty_name);
+	int ret = libssh2_channel_request_pty(channel, utf8pty_name.c_str());
+	if (ret == LIBSSH2_ERROR_ALLOC)
+		pConnection->ExternalEvent(L"Log", L"RequestPTY", L"LIBSSH2_ERROR_ALLOC");
+	else if (ret == LIBSSH2_ERROR_SOCKET_SEND)
+		pConnection->ExternalEvent(L"Log", L"RequestPTY", L"LIBSSH2_ERROR_SOCKET_SEND");
+	else if (ret == LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED)
+		pConnection->ExternalEvent(L"Log", L"RequestPTY", L"LIBSSH2_ERROR_CHANNEL_REQUEST_DENIED");
+	else if (ret != 0)
+		pConnection->ExternalEvent(L"Log", L"RequestPTY", L"UKNOWN ERROR");
+}
+
 void SSHClass::ReadWriteThread()
 {
 	int rc = 0;
-	char buffer[1000];
+	char buffer[10000];
 
 	fd_set fd_in, fd_out;
 	struct timeval tv;
 	tv.tv_sec = 0;
-	tv.tv_usec = 500000;
+	tv.tv_usec = 5000;
 
 	do
 	{
@@ -265,15 +284,29 @@ void SSHClass::ReadWriteThread()
 		{
 			if (FD_ISSET(sock, &fd_in))
 			{
-				rc = libssh2_channel_read(channel, buffer, sizeof(buffer));
+				wstring message = L"";
 				_mutex.lock();
-				if (rc > 0)
-				{
+				do {
+					rc = libssh2_channel_read(channel, buffer, sizeof(buffer));
+					
+					
+					if (rc > 0)
+					{
 
-					string utf8_string(buffer, rc);
-					wstring message = utf8_decode(utf8_string);
+						string utf8_string(buffer, rc);
+						 //;
+						message.append(utf8MultiByteToWideChar(utf8_string));
+					}
+				} while (rc > 0);
+				if (message.length() > 0)
+				{
+					//while (int pos = message.find(0))
+					//wstring replaceFrom = L"\0";
+					
+					
 					pConnection->ExternalEvent(L"Log", L"Message", (wchar_t*)message.c_str());
 				}
+				
 				_mutex.unlock();
 			}
 		}

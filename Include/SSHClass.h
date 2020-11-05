@@ -12,16 +12,16 @@ class SSHClass
 public:
 	SSHClass(IAddInDefBase* connection);
 	~SSHClass();
-	std::string utf8_encode(const std::wstring& wstr);
-	std::wstring utf8_decode(const string& str);
+	std::string utf8WideCharToMultyByte(const std::wstring& wstr);
+	std::wstring utf8MultiByteToWideChar(const string& str);
 	void StartAutorization(const wstring login, const wstring password);
 	void Autorization(const wstring login, const wstring password);
 	void StartConnect(const wstring ip, const int port);
 	void Connect(const wstring ip, const int port);
 	void SendMessageSSH(const wstring message);
 	void Disconnect();
-
 	bool isConnected() { return connected; };
+	void request_pty(wstring pty_name);
 private:
 	bool autorized = false;
 	bool connected = false;

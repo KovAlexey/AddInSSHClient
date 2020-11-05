@@ -21,6 +21,7 @@ public:
 		methodAutorization,
 		methodSend,
 		methodDisconnect,
+		methodRequestPTY,
 		eLastMethod      // Always last
 	};
 
@@ -28,7 +29,8 @@ public:
 		L"Подключиться",
 		L"Авторизация",
 		L"Отправить",
-		L"Отключиться"
+		L"Отключиться",
+		L"ЗапроситьТерминал"
 	};
 
 	CAddInNative(void);
